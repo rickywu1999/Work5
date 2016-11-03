@@ -6,47 +6,62 @@
 #include <fcntl.h>
 #include <time.h>
 #include <dirent.h>
+#include <string.h>
 
-
-//Note to Nancy: will probably not start this until 8 or 9. If you have time, bugfix this (could not compile at library) and work on printing out size of the files
-void print_dir(struct dirent ent, int level){
-  while (ent){
+void print_dir(char * path, int level){
     int c;
     DIR *d;
-    struct dirent newent;
-    char n[] = ent->name;
-    printf("%s",n);
+    char s[100] = "";
+    struct dirent *ent;
     
-    if (ent->d_type == DT_REG){
-      //this part is literally for spacing and formatiting purposes
-      c =level;
-      while (c > 0){
-        printf("\n");
-        c++;
-      }
-      printf("file\n");
-    }
+    struct stat sb;
+    int total = 0;
     
-    if (ent->d_type == DT_DIR){
-      printf("directory\n");
-      //recursion is over here! basically if there is a directory, then use print_dir on the directory's ent
-      d = opendir(n);
-      newent = readdir(d);
-      print_dir(newent,level++);
-      closedir(d);
+    if (!(d = opendir(path))){
+        printf("Directory not found!");
+        return;
     }
-    ent = readdir(d);
-  }
+    while ((ent = readdir(d))){
+        
+        //solely for idetation and  formatting purposes
+        c =level;
+        while (c > 0){
+            printf("\t");
+            c--;
+        }
+        //---------------------------------------------
+        strcat(s,path);
+        strcat(s,"/");
+        strcat(s,ent->d_name);
+        
+        
+        printf("|%s ",ent->d_name);
+        
+        if (ent->d_type == DT_REG){
+            printf("(file)\n");
+            stat(s,&sb);
+            total += sb.st_size;
+        }
+        
+        if (strcmp(ent->d_name,".") == 0 || strcmp(ent->d_name,"..") == 0 )
+            printf("\n");
+        
+        else if (ent->d_type == DT_DIR){
+            printf("(directory)\n");
+            print_dir(s,level+1);
+        }
+        memset(s, 0, strlen(s));
+    }
+    closedir(d);
+    c =level;
+    while (c > 0){
+        printf("\t");
+        c--;
+    }
+    printf("||SIZE OF DIRECTORY: %d\n",total);
 }
 
 int main(){
-  DIR *d = opendir("stuff");
-  if (!d){
-    printf("Directory not found!\n");
+    print_dir("stuff",0);
     return 0;
-  }
-  struct dirent *ent = readdir (d);
-  print_dir(ent,0);
-  close_dir(d);
-  return 0;
 }
